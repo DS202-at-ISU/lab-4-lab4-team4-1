@@ -8,22 +8,94 @@ date: "2024-12-04"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+```{r}
+library(rvest)
+library(dplyr)
+library(Lahman)
+library(readr)
+library(ggplot2)
+url <- "https://www.baseball-reference.com/awards/hof_2024.shtml"
+html <- read_html(url)
+tables <- html_table(html)
+data <- tables[[1]]
+actual_col_names <- data[1, ]
+colnames(data) <- make.names(actual_col_names, unique = TRUE) # Ensure unique column names
+data <- data[-1, ]
+print(colnames(data))
+tables
+HallOfFame
+data <- data %>%
+  rename(
+    playerID = Name,
+    yearID = YoB,
+    votes = Votes,
+    inducted = X.vote # Correct column name
+  ) %>%
+  mutate(
+    yearID = 2024, # Assign the year 2024 to all entries
+    votes = as.numeric(votes),
+    inducted = ifelse(parse_number(inducted) >= 75, "Y", "N"), # Parse induction percentage
+    category = "Player", # Assuming all entries are players
+    needed = 75, # Percentage needed for induction
+    ballots = NA, # Placeholder as ballots data is not available
+    needed_note = NA # Placeholder for needed_note
+  ) %>%
+  mutate(
+    playerID = tolower(gsub(" ", "", playerID)) # Format playerID consistently
+  )
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# Step 3: Align Columns
+# Select only the necessary columns from `data`
+data <- data %>%
+  select(
+    playerID,    # Match `playerID`
+    yearID,      # Match `yearID`
+    votes,       # Match `votes`
+    inducted,    # Match `inducted`
+    category,    # Match `category`
+    needed,      # Match `needed`
+    ballots,     # Match `ballots`
+    needed_note  # Match `needed_note`
+  ) %>%
+  # Add the missing column `votedBy` with a default value
+  mutate(votedBy = "BBWAA") %>%
+  # Reorder columns to match the `HallOfFame` structure
+  select(playerID, yearID, votedBy, ballots, needed, votes, inducted, category, needed_note)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+# Ensure column types are consistent
+data <- type.convert(data, as.is = TRUE)
 
-```{r cars}
-summary(cars)
+# Step 3.2: Combine with the existing `HallOfFame` dataset
+combined_data <- rbind(HallOfFame, data)
+
+# Step 4: Add `playerID` based on the last name and first two letters of the first name
+combined_data <- combined_data %>%
+  mutate(
+    playerID = tolower(paste0(
+      sapply(strsplit(playerID, " "), function(x) x[length(x)]), # Last name
+      substr(sapply(strsplit(playerID, " "), function(x) x[1]), 1, 2) # First two letters of first name
+    ))
+  )
+
+# View the structure of the combined dataset
+str(combined_data)
+
+# Preview the first few rows of the combined data
+head(combined_data)
+
+# Step 5: Save the Combined Dataset
+write.csv(combined_data, "HallOfFame_2024.csv", row.names = FALSE)
+
+# Step 6: Visualize Hall of Fame Inductions Over Time
+combined_data %>%
+  ggplot(aes(x = yearID, fill = inducted)) +
+  geom_bar() +
+  xlim(c(1936, 2024)) +  # Adjust the x-axis limits to include all relevant years
+  labs(
+    title = "Hall of Fame Inductions Over Time",
+    x = "Year",
+    y = "Number of Inductees",
+    fill = "Inducted"
+  ) +
+  theme_minimal()
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
