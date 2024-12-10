@@ -1,0 +1,69 @@
+---
+title: "GrantSpringman"
+output: html_document
+date: "2024-12-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Chunk_1}
+library(Lahman)
+library(dplyr)
+library(rvest)
+library(stringr)
+
+
+url <- "https://www.baseball-reference.com/awards/hof_2024.shtml"
+html <- read_html(url)
+tables <- html_table(html)
+
+data("HallOfFame")
+
+HallOfFame24 <- HallOfFame %>%
+  filter(HallOfFame$yearID == 2024 & HallOfFame$category == 'Player')
+
+ScrapedData
+
+ScrapedData <- tables[[1]]
+actual_col_names <- ScrapedData[1, ]
+colnames(ScrapedData) <- actual_col_names
+ScrapedData <- ScrapedData[-1, ]
+
+HallOfFame24$LastFive <- toupper(str_sub(HallOfFame24$playerID, end = -5))
+HallOfFame24$FirstTwo <- toupper(str_sub(HallOfFame24$playerID, 6, 7))
+
+
+ScrapedData$Name <- gsub("X-", "", ScrapedData$Name)
+
+
+split_names <- str_split_fixed(ScrapedData$Name, " ", 2)
+ScrapedData$first_name <- split_names[, 1]
+ScrapedData$last_name <- split_names[, 2]
+
+ScrapedData$FirstTwo <- toupper(str_sub(ScrapedData$first_name, 1, 2))
+ScrapedData$LastFive <- toupper(str_sub(ScrapedData$last_name, 1, 5))
+
+#Combined both the scraped and hall of fame data by the player first and last names
+combinedStats <- merge(HallOfFame24, ScrapedData, by = c("FirstTwo", "LastFive"))
+
+write.csv(combinedStats, file="Grant2024CombinedDataset.csv", row.names = FALSE)
+
+#Graph of just 2024
+ggplot(combinedStats, aes(x = yearID, fill = inducted)) + geom_bar()
+
+#Transformed the combined data columns to fit to merge with the larger hall of fame data for all years
+combinedStats <- combinedStats %>% 
+  select(playerID, yearID, votedBy, ballots, needed, votes, inducted, category, needed_note)
+
+HallOfFame <- rbind(HallOfFame, combinedStats)
+
+#Graph of all years
+HallOfFame %>% 
+  ggplot(aes(x = yearID, fill = inducted)) +
+  geom_bar() +
+  xlim(c(1936, 2024))
+
+```
