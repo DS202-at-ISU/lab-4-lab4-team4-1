@@ -1,11 +1,9 @@
 ---
-title: "progress-report-BriettaB"
-author: "Brietta Beisner"
+title: "progress-report-Final"
+author: "Team 4"
 date: "2024-12-04"
 output: html_document
 ---
-
-****MAKE EVERYTHING INTO A FUNCTION
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
