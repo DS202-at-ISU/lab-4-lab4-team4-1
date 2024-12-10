@@ -14,6 +14,7 @@ library(Lahman)
 library(dplyr)
 library(rvest)
 library(stringr)
+library(ggplot2)
 
 
 url <- "https://www.baseball-reference.com/awards/hof_2024.shtml"
@@ -22,11 +23,11 @@ tables <- html_table(html)
 
 data("HallOfFame")
 
+#Data from the Lahman package to only include players to match with the scraped data
 HallOfFame24 <- HallOfFame %>%
   filter(HallOfFame$yearID == 2024 & HallOfFame$category == 'Player')
 
-ScrapedData
-
+#Scraped data from the website
 ScrapedData <- tables[[1]]
 actual_col_names <- ScrapedData[1, ]
 colnames(ScrapedData) <- actual_col_names
